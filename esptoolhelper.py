@@ -1,13 +1,16 @@
 import os
+import pathlib
 import inquirer
 import serial.tools.list_ports
 
 if __name__ == "__main__":
 
-    firmware_files = list()
-    for f in os.listdir():
-        if f.endswith('.bin'):
-            firmware_files.append(f)
+    CWD = pathlib.Path.cwd()
+
+    firmware_files = dict()
+
+    for f in CWD.rglob('*.bin'):
+        firmware_files[str(f.relative_to(CWD))] = f
 
     questions = [
         inquirer.List('port',
@@ -16,10 +19,13 @@ if __name__ == "__main__":
     ),
     inquirer.List('firmware',
             message="Choose firmware",
-            choices=firmware_files,
+            choices=firmware_files.keys(),
     ),
     ]
 answers = inquirer.prompt(questions)
 
 os.system("esptool.py --port {port} erase_flash".format(port=answers['port']))
-os.system("esptool.py --port {port} --baud 460800 write_flash --flash_size=detect 0 {firmware}".format(port=answers['port'], firmware=answers['firmware']))
+os.system("esptool.py --port {port} --baud 460800 write_flash --flash_size=detect 0 {firmware}".format(
+        port=answers['port'],
+        firmware=firmware_files[answers['firmware']])
+    )
